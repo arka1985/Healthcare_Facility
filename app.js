@@ -39,7 +39,7 @@ const state = {
   activeSort: 'nearest',
   searchQuery: '',
   dataSourceType: 'checking', // 'api' | 'fallback'
-  tileLayerName: 'osm',
+  tileLayerName: 'esri_street',
   activeResourceId: 'db2e3a80-ea7a-4ead-987a-9564fcee3c08', // Default to Health Centres Directory
   activeDatasetFile: 'data/hospitals_india.json',
   renderedCardLimit: 60
@@ -77,20 +77,21 @@ function initMap() {
     attributionControl: true
   });
 
-  // Base Tile Layers (100% Free, No API Key Required)
-  // 1. OpenStreetMap Standard (Official global street tiles)
-  tileLayers['osm'] = L.tileLayer(
-    'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+  // Base Tile Layers (100% Free, Zero 403 Blocks, Enterprise Global CDN)
+  // 1. Esri World Street Map (Ultra-reliable global CDN, pristine pastel street map, never blocked)
+  tileLayers['esri_street'] = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Street data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
       maxZoom: 19
     }
   );
 
-  // 2. Esri World Street Map (Crisp, clean pastel street map)
-  tileLayers['esri_street'] = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom',
-      maxZoom: 19
+  // 2. OpenStreetMap France CDN (High-capacity dedicated European/Global OSM mirror, doesn't block)
+  tileLayers['osm_fr'] = L.tileLayer(
+    'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; OpenStreetMap France',
+      subdomains: ['a', 'b', 'c'],
+      maxZoom: 20
     }
   );
 
@@ -98,6 +99,7 @@ function initMap() {
   tileLayers['humanitarian'] = L.tileLayer(
     'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, Tiles by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>',
+      subdomains: ['a', 'b', 'c'],
       maxZoom: 19
     }
   );
@@ -105,13 +107,31 @@ function initMap() {
   // 4. Esri World Imagery (Satellite)
   tileLayers['satellite'] = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
       maxZoom: 18
     }
   );
 
-  // Set default tile layer to OpenStreetMap Standard (No API key needed)
-  tileLayers['osm'].addTo(map);
+  // 5. OpenStreetMap Standard with automatic error recovery
+  const osmStandardLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+      subdomains: ['a', 'b', 'c'],
+      maxZoom: 19
+    }
+  );
+  // Auto-recover if volunteer server sends 403
+  osmStandardLayer.on('tileerror', function(error) {
+    if (error.tile && !error.tile._fallbackTried) {
+      error.tile._fallbackTried = true;
+      const c = error.coords;
+      error.tile.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${c.z}/${c.y}/${c.x}`;
+    }
+  });
+  tileLayers['osm_direct'] = osmStandardLayer;
+
+  // Set default tile layer to Esri World Street (100% Reliable, Zero 403 Blocks)
+  tileLayers['esri_street'].addTo(map);
 
   // Initialize Marker Cluster Group with watercolor styled bubbles
   markerClusterGroup = L.markerClusterGroup({

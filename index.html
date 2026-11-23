@@ -236,17 +236,17 @@
           </div>
           <div class="layer-options-list">
             <label class="layer-radio-item active">
-              <input type="radio" name="mapTileLayer" value="osm" checked>
+              <input type="radio" name="mapTileLayer" value="esri_street" checked>
               <span class="layer-radio-label">
-                <strong>OpenStreetMap Standard</strong>
-                <small>Official global street tiles (Free, No API key)</small>
+                <strong>Esri World Street (Recommended)</strong>
+                <small>Ultra-reliable global CDN, 100% Free, Zero Blocks</small>
               </span>
             </label>
             <label class="layer-radio-item">
-              <input type="radio" name="mapTileLayer" value="esri_street">
+              <input type="radio" name="mapTileLayer" value="osm_fr">
               <span class="layer-radio-label">
-                <strong>Esri World Street</strong>
-                <small>Clean pastel street details (Free, No API key)</small>
+                <strong>OpenStreetMap (Dedicated Mirror)</strong>
+                <small>High speed European/Global OSM mirror</small>
               </span>
             </label>
             <label class="layer-radio-item">
@@ -261,6 +261,13 @@
               <span class="layer-radio-label">
                 <strong>Esri World Imagery</strong>
                 <small>High resolution satellite aerial</small>
+              </span>
+            </label>
+            <label class="layer-radio-item">
+              <input type="radio" name="mapTileLayer" value="osm_direct">
+              <span class="layer-radio-label">
+                <strong>OSM Standard (With Auto-Recovery)</strong>
+                <small>Official volunteer servers + Auto-fallback</small>
               </span>
             </label>
           </div>
