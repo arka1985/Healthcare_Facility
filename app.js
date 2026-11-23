@@ -330,9 +330,15 @@ function getUserLocationIcon() {
 // Data Loading: API with Fallback
 // ==========================================================================
 async function loadData() {
-  updateDataSourceStatus('checking', 'Connecting to API / Database...');
+  updateDataSourceStatus('checking', 'Connecting to Database...');
 
-  let apiSuccess = false;
+  // 1. ALWAYS load the complete nationwide fallback dataset FIRST
+  // This guarantees facilities across all of India (including user's exact area) are immediately available
+  await loadFallbackDataset();
+  populateStateDropdown();
+  applyFilters();
+
+  // 2. Now attempt to query the live Government API in background to merge any live updates
   const resId = state.activeResourceId || CONFIG.HEALTH_CENTRES_RES_ID;
 
   try {
@@ -344,7 +350,7 @@ async function loadData() {
 
     const apiUrl = `https://api.data.gov.in/resource/${resId}?api-key=${CONFIG.API_KEY}&format=json&limit=${limit}${filterQuery}`;
     
-    // We try local proxy if available on localhost, or direct API for GitHub Pages
+    // Use local proxy if on localhost, or direct API on GitHub Pages
     const targetUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? `${CONFIG.LOCAL_PROXY}?resource=${resId}&limit=${limit}${filterQuery}`
       : apiUrl;
@@ -358,23 +364,15 @@ async function loadData() {
     if (res.ok) {
       const data = await res.json();
       if (data && data.records && Array.isArray(data.records) && data.records.length > 0) {
-        processApiRecords(data.records);
-        apiSuccess = true;
+        mergeApiRecords(data.records);
         const apiTitle = resId === CONFIG.HEALTH_CENTRES_RES_ID ? 'Health Centres API' : 'Hospitals API';
-        updateDataSourceStatus('api', `Live Gov ${apiTitle} (${data.records.length} records)`);
+        updateDataSourceStatus('api', `Live Gov ${apiTitle} Connected (${state.hospitals.length.toLocaleString()} facilities)`);
+        applyFilters();
       }
     }
   } catch (err) {
-    console.warn('Government API unreachable or blocked by CORS. Activating fallback dataset...', err);
+    console.log('Using pre-loaded nationwide dataset. Live API note:', err.message);
   }
-
-  // Fallback to local optimized dataset if API did not succeed or to merge fallback
-  if (!apiSuccess) {
-    await loadFallbackDataset();
-  }
-
-  populateStateDropdown();
-  applyFilters();
 }
 
 // Fallback dataset loader
@@ -385,9 +383,7 @@ async function loadFallbackDataset(customPath) {
     if (!res.ok) throw new Error(`Fallback file not found: ${filePath}`);
     const data = await res.json();
     state.hospitals = data;
-    const isFull = filePath.includes('all_health_facilities');
-    const label = isFull ? `Full Dataset (${data.length.toLocaleString()} facilities)` : `Primary Dataset (${data.length.toLocaleString()} facilities)`;
-    updateDataSourceStatus('fallback', label);
+    updateDataSourceStatus('fallback', `National Directory (${data.length.toLocaleString()} facilities)`);
     showToast(`Loaded ${data.length.toLocaleString()} healthcare facilities across India`);
   } catch (err) {
     console.error('Failed to load fallback dataset:', err);
@@ -396,8 +392,32 @@ async function loadFallbackDataset(customPath) {
   }
 }
 
+// Merge live API records into state.hospitals without replacing the nationwide database
+function mergeApiRecords(records) {
+  const mapped = parseRecords(records);
+  if (mapped.length === 0) return;
+
+  const existingKeys = new Set(
+    state.hospitals.slice(0, 5000).map(h => `${(h.name || '').toLowerCase()}_${Number(h.lat).toFixed(3)}_${Number(h.lng).toFixed(3)}`)
+  );
+
+  const newItems = [];
+  mapped.forEach(item => {
+    const key = `${(item.name || '').toLowerCase()}_${Number(item.lat).toFixed(3)}_${Number(item.lng).toFixed(3)}`;
+    if (!existingKeys.has(key)) {
+      newItems.push(item);
+      existingKeys.add(key);
+    }
+  });
+
+  if (newItems.length > 0) {
+    state.hospitals = [...newItems, ...state.hospitals];
+    if (state.userCoords) calculateDistances();
+  }
+}
+
 // Normalize API records into unified structure (Supports both Health Centres & Hospital APIs)
-function processApiRecords(records) {
+function parseRecords(records) {
   const mapped = [];
   const typeMap = {
     'dis_h': 'District Hospital',
@@ -408,7 +428,6 @@ function processApiRecords(records) {
   };
 
   records.forEach((r, idx) => {
-    // 1. Check coordinates (Health Centres API: latitude/longitude; Hospitals API: Location_Coordinates)
     let lat = null;
     let lng = null;
 
@@ -426,7 +445,6 @@ function processApiRecords(records) {
 
     if (isNaN(lat) || isNaN(lng) || lat < 6.0 || lat > 38.5 || lng < 68.0 || lng > 97.5) return;
 
-    // 2. Normalize attributes
     const name = r.Facility_Name || r.facility_name || r.Hospital_Name || r.hospital_name || 'Healthcare Facility';
     const stateName = r.State_Name || r.state_name || r.State || r.state || '';
     const districtName = r.District_Name || r.district_name || r.District || r.district || '';
@@ -437,7 +455,7 @@ function processApiRecords(records) {
     const address = r.Facility_Address || r.facility_address || r.Address_Original_First_Line || r.address_original_first_line || r.Location || '';
 
     mapped.push({
-      id: idx + 1,
+      id: 900000 + idx + 1,
       name: name,
       lat: lat,
       lng: lng,
@@ -460,9 +478,11 @@ function processApiRecords(records) {
     });
   });
 
-  if (mapped.length > 0) {
-    state.hospitals = mapped;
-  }
+  return mapped;
+}
+
+function processApiRecords(records) {
+  mergeApiRecords(records);
 }
 
 // Update status pill in header
@@ -868,14 +888,30 @@ function applyFilters() {
   const sortMode = state.activeSort;
 
   let results = state.hospitals.filter(h => {
-    // Text search (name, district, state, pincode, address)
+    // Text search (name, category, care type, district, state, pincode, address, specialties)
     if (query) {
+      const q = query.toLowerCase().trim();
+      const cat = (h.category || '').toLowerCase();
+      const care = (h.care_type || '').toLowerCase();
+      const name = (h.name || '').toLowerCase();
+      const tcode = (h.type_code || '').toLowerCase();
+
       const match =
-        h.name.toLowerCase().includes(query) ||
-        (h.district && h.district.toLowerCase().includes(query)) ||
-        (h.state && h.state.toLowerCase().includes(query)) ||
-        (h.pincode && h.pincode.includes(query)) ||
-        (h.address && h.address.toLowerCase().includes(query));
+        name.includes(q) ||
+        cat.includes(q) ||
+        care.includes(q) ||
+        (h.district && h.district.toLowerCase().includes(q)) ||
+        (h.state && h.state.toLowerCase().includes(q)) ||
+        (h.address && h.address.toLowerCase().includes(q)) ||
+        (h.pincode && h.pincode.includes(q)) ||
+        (h.specialties && h.specialties.toLowerCase().includes(q)) ||
+        // Handle common search synonyms
+        ((q === 'public' || q === 'govt' || q === 'government') && 
+          (cat.includes('public') || cat.includes('government') || care.includes('district') || care.includes('community') || care.includes('primary') || tcode === 'phc' || tcode === 'chc' || tcode === 'dis_h')) ||
+        (q === 'private' && cat.includes('private')) ||
+        (q === 'chc' && (tcode === 'chc' || care.includes('community') || name.includes('chc'))) ||
+        (q === 'phc' && (tcode === 'phc' || care.includes('primary') || name.includes('phc')));
+
       if (!match) return false;
     }
 
@@ -888,7 +924,10 @@ function applyFilters() {
       const name = h.name.toLowerCase();
       const tcode = (h.type_code || '').toLowerCase();
 
-      if (category === 'public' && !cat.includes('public') && !cat.includes('government')) return false;
+      if (category === 'public') {
+        const isPublic = cat.includes('public') || cat.includes('government') || care.includes('district') || care.includes('sub-divisional') || care.includes('community') || care.includes('primary') || tcode === 'phc' || tcode === 'chc' || tcode === 'dis_h' || tcode === 's_t_h';
+        if (!isPublic) return false;
+      }
       if (category === 'private' && !cat.includes('private')) return false;
       if (category === 'dis_h' && !care.includes('district') && tcode !== 'dis_h') return false;
       if (category === 'chc' && !care.includes('community') && !name.includes('chc') && tcode !== 'chc') return false;
@@ -986,11 +1025,31 @@ function renderCardsList(facilities) {
   container.innerHTML = '';
 
   if (facilities.length === 0) {
+    let actionButtons = '';
+    if (state.activeDistance !== 'all') {
+      actionButtons += `
+        <button class="btn-card-action" onclick="window.appExpandDistance(10)" style="margin:3px;">Expand to 10 km</button>
+        <button class="btn-card-action" onclick="window.appExpandDistance(25)" style="margin:3px;">Expand to 25 km</button>
+        <button class="btn-card-action" onclick="window.appExpandDistance('all')" style="margin:3px;">Any Distance</button>
+      `;
+    }
+    if (state.searchQuery) {
+      actionButtons += `
+        <button class="btn-card-action" onclick="window.appClearSearch()" style="margin:3px;">Clear Search "${state.searchQuery}"</button>
+      `;
+    }
+    actionButtons += `
+      <button class="btn-card-action route" onclick="window.appResetAllFilters()" style="margin:3px; margin-top:8px;">Reset All Filters</button>
+    `;
+
     container.innerHTML = `
-      <div style="text-align: center; padding: 40px 20px; color: #64748b;">
-        <i class="fa-solid fa-hospital-user" style="font-size: 40px; color: #cbd5e1; margin-bottom: 12px;"></i>
-        <h4 style="font-size: 15px; font-weight: 700; color: #334155;">No facilities matched</h4>
-        <p style="font-size: 12.5px;">Try loosening your filters, changing distance, or searching another term.</p>
+      <div style="text-align: center; padding: 32px 14px; color: #64748b;">
+        <i class="fa-solid fa-hospital-user" style="font-size: 36px; color: #cbd5e1; margin-bottom: 10px;"></i>
+        <h4 style="font-size: 14.5px; font-weight: 700; color: #334155; margin-bottom: 4px;">No facilities matched current filters</h4>
+        <p style="font-size: 12px; margin-bottom: 12px;">Try expanding distance, clearing your search term, or resetting filters:</p>
+        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:4px;">
+          ${actionButtons}
+        </div>
       </div>
     `;
     return;
@@ -1184,6 +1243,29 @@ window.appTriggerRoute = function(id) {
 window.appShowDetails = function(id) {
   const h = state.hospitals.find(item => item.id === id);
   if (h) showFacilityDetails(h);
+};
+
+window.appExpandDistance = function(dist) {
+  const sel = document.getElementById('distanceFilterSelect');
+  if (sel) sel.value = dist;
+  state.activeDistance = String(dist);
+  state.renderedCardLimit = 60;
+  applyFilters();
+};
+
+window.appClearSearch = function() {
+  const inp = document.getElementById('facilitySearchInput');
+  if (inp) inp.value = '';
+  const clr = document.getElementById('clearSearchBtn');
+  if (clr) clr.style.display = 'none';
+  state.searchQuery = '';
+  state.renderedCardLimit = 60;
+  applyFilters();
+};
+
+window.appResetAllFilters = function() {
+  const btn = document.getElementById('resetFiltersBtn');
+  if (btn) btn.click();
 };
 
 // ==========================================================================
