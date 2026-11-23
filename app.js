@@ -43,7 +43,7 @@ const state = {
   dataSourceType: 'checking', // 'api' | 'fallback'
   tileLayerName: 'esri_street',
   activeResourceId: 'db2e3a80-ea7a-4ead-987a-9564fcee3c08', // Default to Health Centres Directory
-  activeDatasetFile: 'data/hospitals_india.json',
+  activeDatasetFile: 'data/all_health_facilities.json', // Default to Unified 147k+ Facilities
   renderedCardLimit: 60
 };
 
@@ -1558,10 +1558,24 @@ function setupEventListeners() {
   if (offlineSelect) {
     offlineSelect.addEventListener('change', async (e) => {
       const mode = e.target.value;
-      state.activeDatasetFile = mode === 'full' ? CONFIG.FALLBACK_DATA_FULL : CONFIG.FALLBACK_DATA_PATH;
-      showToast(`Switching to ${mode === 'full' ? 'Full 47k+ Facilities' : 'Primary 18k+ Facilities'}...`);
-      await loadFallbackDataset(state.activeDatasetFile);
-      applyFilters();
+      if (mode === 'unified') {
+        state.activeDatasetFile = CONFIG.FALLBACK_DATA_FULL;
+        showToast('Switching to Unified 147k+ Facilities (Gov + HDX/OSM)...');
+        await loadFallbackDataset(state.activeDatasetFile);
+      } else if (mode === 'gov') {
+        state.activeDatasetFile = CONFIG.FALLBACK_DATA_PATH;
+        showToast('Switching to National Directory 47k+ Facilities (Gov Only)...');
+        await loadFallbackDataset(state.activeDatasetFile);
+      } else if (mode === 'failsafe') {
+        if (window.DEFAULT_HOSPITALS_DATA && window.DEFAULT_HOSPITALS_DATA.length > 0) {
+          state.hospitals = [...window.DEFAULT_HOSPITALS_DATA];
+          calculateDistances();
+          populateStateDropdown();
+          applyFilters();
+          updateDataSourceStatus('fallback', `Fast Failsafe (${state.hospitals.length.toLocaleString()} facilities)`);
+          showToast(`Switched to Fast Failsafe (${state.hospitals.length.toLocaleString()} facilities)`);
+        }
+      }
     });
   }
 
@@ -1580,29 +1594,141 @@ function setupEventListeners() {
     document.getElementById('dataSyncModal').style.display = 'none';
   });
 
-  // Custom CSV Upload via PapaParse
+  // Custom CSV or GeoJSON Upload
   const csvInput = document.getElementById('customCsvInput');
-  document.getElementById('browseCsvBtn').addEventListener('click', () => csvInput.click());
-  csvInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const browseCsvBtn = document.getElementById('browseCsvBtn');
+  if (browseCsvBtn && csvInput) {
+    browseCsvBtn.addEventListener('click', () => csvInput.click());
+    csvInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-    showToast(`Parsing ${file.name}...`);
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.data && results.data.length > 0) {
-          processApiRecords(results.data);
-          applyFilters();
-          showToast(`Successfully imported ${results.data.length.toLocaleString()} rows from CSV!`);
-          document.getElementById('dataSyncModal').style.display = 'none';
-        }
-      },
-      error: (err) => {
-        showToast('Error parsing CSV: ' + err.message, 'error');
+      showToast(`Reading ${file.name}...`);
+      const fileName = file.name.toLowerCase();
+
+      if (fileName.endsWith('.geojson') || fileName.endsWith('.json')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const parsed = JSON.parse(event.target.result);
+            let imported = [];
+            if (parsed.type === 'FeatureCollection' && Array.isArray(parsed.features)) {
+              imported = convertGeoJsonFeatures(parsed.features);
+            } else if (Array.isArray(parsed)) {
+              imported = parsed;
+            }
+            if (imported.length > 0) {
+              mergeApiRecords(imported);
+              applyFilters();
+              showToast(`Imported ${imported.length.toLocaleString()} facilities from GeoJSON!`);
+              document.getElementById('dataSyncModal').style.display = 'none';
+            } else {
+              showToast('No valid health facilities found in file', 'error');
+            }
+          } catch (err) {
+            showToast('Error reading GeoJSON: ' + err.message, 'error');
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            if (results.data && results.data.length > 0) {
+              processApiRecords(results.data);
+              applyFilters();
+              showToast(`Successfully imported ${results.data.length.toLocaleString()} rows from CSV!`);
+              document.getElementById('dataSyncModal').style.display = 'none';
+            }
+          },
+          error: (err) => {
+            showToast('Error parsing CSV: ' + err.message, 'error');
+          }
+        });
       }
     });
+  }
+
+  // About Developer & Legal Modal Triggers
+  const headerAboutBtn = document.getElementById('headerAboutBtn');
+  if (headerAboutBtn) headerAboutBtn.addEventListener('click', () => openLegalModal('tab-developer'));
+
+  const openAboutCardBtn = document.getElementById('openAboutCardBtn');
+  if (openAboutCardBtn) openAboutCardBtn.addEventListener('click', () => openLegalModal('tab-developer'));
+
+  const linkDisclaimer = document.getElementById('linkDisclaimer');
+  if (linkDisclaimer) linkDisclaimer.addEventListener('click', (e) => { e.preventDefault(); openLegalModal('tab-disclaimer'); });
+
+  const linkPrivacy = document.getElementById('linkPrivacy');
+  if (linkPrivacy) linkPrivacy.addEventListener('click', (e) => { e.preventDefault(); openLegalModal('tab-privacy'); });
+
+  const linkTerms = document.getElementById('linkTerms');
+  if (linkTerms) linkTerms.addEventListener('click', (e) => { e.preventDefault(); openLegalModal('tab-terms'); });
+
+  setupModalClose('aboutLegalModal', 'closeAboutLegalBtn', 'closeAboutLegalBackdrop');
+
+  // Legal Modal Tab Switching
+  document.querySelectorAll('.legal-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openLegalModal(btn.dataset.tab);
+    });
+  });
+
+  // Copy Developer Email Action
+  const copyDevEmailBtn = document.getElementById('copyDevEmailBtn');
+  if (copyDevEmailBtn) {
+    copyDevEmailBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText('arka.doctor@gmail.com').then(() => {
+        showToast('Email copied: arka.doctor@gmail.com');
+      }).catch(() => {
+        showToast('arka.doctor@gmail.com');
+      });
+    });
+  }
+}
+
+// Convert GeoJSON Features to App Facility Format
+function convertGeoJsonFeatures(features) {
+  let nextId = 900000;
+  return features.map(f => {
+    const props = f.properties || {};
+    let lat = 0, lng = 0;
+    if (f.geometry && f.geometry.coordinates) {
+      if (f.geometry.type === 'Point') {
+        lng = f.geometry.coordinates[0];
+        lat = f.geometry.coordinates[1];
+      } else if (f.geometry.coordinates[0] && f.geometry.coordinates[0][0]) {
+        lng = f.geometry.coordinates[0][0][0];
+        lat = f.geometry.coordinates[0][0][1];
+      }
+    }
+    return {
+      id: nextId++,
+      name: props.name || props.facility_name || 'Health Facility',
+      lat: Number(lat),
+      lng: Number(lng),
+      state: props.adm1_name || props.state || '',
+      district: props.adm2_name || props.district || '',
+      category: props.operator_type === 'public' ? 'Public / Government' : (props.operator_type === 'private' ? 'Private' : 'General'),
+      care_type: props.amenity || props.healthcare || 'Hospital',
+      system: props.healthcare_speciality || 'Allopathic',
+      source: 'Imported GeoJSON'
+    };
+  }).filter(h => h.lat !== 0 && h.lng !== 0 && h.name);
+}
+
+// Open About & Legal Modal to a specific tab
+function openLegalModal(tabId = 'tab-developer') {
+  const modal = document.getElementById('aboutLegalModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  document.querySelectorAll('.legal-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tabId);
+  });
+  document.querySelectorAll('.legal-tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === tabId);
   });
 }
 

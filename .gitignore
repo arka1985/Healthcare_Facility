@@ -9,6 +9,10 @@ __pycache__/
 *$py.class
 .pytest_cache/
 
+# Large raw downloaded datasets (> 100MB exceeds GitHub limits)
+health_facilities_osm_geojson/*.geojson
+*.csv.gz
+
 # Editor
 .vscode/
 .idea/

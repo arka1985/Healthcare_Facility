@@ -96,6 +96,12 @@
           <span class="locate-text">My GPS</span>
         </button>
 
+        <!-- About Developer & Legal Button -->
+        <button id="headerAboutBtn" class="btn-locate btn-about-header" title="About Developer, Disclaimer & Privacy Policy">
+          <i class="fa-solid fa-user-doctor"></i>
+          <span class="locate-text">About</span>
+        </button>
+
         <!-- Route Mode Button -->
         <button id="routePanelBtn" class="btn-route-toggle" title="View Active Route Directions" style="display: none;">
           <i class="fa-solid fa-route"></i>
@@ -248,6 +254,27 @@
             <div class="skeleton-line title"></div>
             <div class="skeleton-line subtitle"></div>
             <div class="skeleton-line text"></div>
+          </div>
+        </div>
+
+        <!-- Sidebar Footer with Developer Attribution & Legal Links -->
+        <div class="sidebar-footer">
+          <button class="dev-attribution-card" id="openAboutCardBtn" type="button" title="View Developer Profile &amp; Credentials">
+            <div class="dev-mini-avatar">
+              <i class="fa-solid fa-user-doctor"></i>
+            </div>
+            <div class="dev-mini-info">
+              <div class="dev-name">Developed by <strong>Dr. Arkaprabha Sau</strong></div>
+              <div class="dev-sub">MBBS, MD (Gold Medalist), DPH, PhD (CSE)</div>
+            </div>
+            <i class="fa-solid fa-chevron-right dev-arrow"></i>
+          </button>
+          <div class="sidebar-legal-links">
+            <button type="button" class="legal-link-btn" id="linkDisclaimer">Disclaimer</button>
+            <span class="sep">•</span>
+            <button type="button" class="legal-link-btn" id="linkPrivacy">Privacy Policy</button>
+            <span class="sep">•</span>
+            <button type="button" class="legal-link-btn" id="linkTerms">Terms of Use</button>
           </div>
         </div>
       </aside>
@@ -507,8 +534,9 @@
             <div style="flex: 1;">
               <label class="info-label">Offline Dataset</label>
               <select id="offlineDatasetSelect" class="filter-select">
-                <option value="primary" selected>Primary (18,225 Facilities)</option>
-                <option value="full">Full (47,789 Facilities)</option>
+                <option value="unified" selected>Unified (147,459 Facilities: Gov + HDX/OSM)</option>
+                <option value="gov">National Directory (47,789 Facilities: Gov Only)</option>
+                <option value="failsafe">Fast Failsafe (5,163 Core Hospitals)</option>
               </select>
             </div>
           </div>
@@ -527,9 +555,162 @@
         <!-- Custom CSV Drag & Drop / Upload -->
         <div class="custom-csv-upload-box">
           <i class="fa-solid fa-file-arrow-up upload-icon"></i>
-          <p>Or load a custom <strong>hospital_directory.csv</strong> file directly</p>
-          <input type="file" id="customCsvInput" accept=".csv" style="display: none;">
-          <button id="browseCsvBtn" class="btn-link-action">Browse CSV File</button>
+          <p>Or load a custom <strong>CSV or GeoJSON</strong> health facilities file</p>
+          <input type="file" id="customCsvInput" accept=".csv,.geojson,.json" style="display: none;">
+          <button id="browseCsvBtn" class="btn-link-action">Browse CSV / GeoJSON File</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Developer, Disclaimer, Privacy Policy & Terms of Use Modal -->
+  <div id="aboutLegalModal" class="app-modal" style="display: none;">
+    <div class="modal-backdrop" id="closeAboutLegalBackdrop"></div>
+    <div class="modal-sheet-dialog about-legal-dialog">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-sheet-header">
+        <div class="modal-header-title">
+          <div class="header-avatar-badge">
+            <i class="fa-solid fa-user-doctor text-primary" style="font-size: 24px;"></i>
+          </div>
+          <div>
+            <h3>About &amp; Legal Compliance</h3>
+            <p class="text-muted">Developed by Dr. Arkaprabha Sau • AarogyaMap India</p>
+          </div>
+        </div>
+        <button id="closeAboutLegalBtn" class="btn-icon-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Legal Navigation Tabs -->
+      <div class="legal-tab-bar">
+        <button class="legal-tab-btn active" data-tab="tab-developer">
+          <i class="fa-solid fa-id-card-clip"></i> Developer
+        </button>
+        <button class="legal-tab-btn" data-tab="tab-disclaimer">
+          <i class="fa-solid fa-shield-heart"></i> Disclaimer
+        </button>
+        <button class="legal-tab-btn" data-tab="tab-privacy">
+          <i class="fa-solid fa-user-shield"></i> Privacy Policy
+        </button>
+        <button class="legal-tab-btn" data-tab="tab-terms">
+          <i class="fa-solid fa-scale-balanced"></i> Terms of Use
+        </button>
+      </div>
+
+      <div class="legal-modal-body">
+        <!-- Tab 1: Developer Profile & Intent -->
+        <div id="tab-developer" class="legal-tab-content active">
+          <div class="developer-hero-card">
+            <div class="doctor-badge-ribbon">
+              <i class="fa-solid fa-award"></i> Gold Medalist
+            </div>
+            <div class="doctor-avatar-circle">
+              <i class="fa-solid fa-user-doctor"></i>
+            </div>
+            <h3 class="developer-name">Dr. Arkaprabha Sau</h3>
+            <div class="developer-degrees">
+              <span class="degree-pill">MBBS</span>
+              <span class="degree-pill highlight">MD (Gold Medalist)</span>
+              <span class="degree-pill">DPH</span>
+              <span class="degree-pill">Dip. Geriatric Medicine</span>
+              <span class="degree-pill">CCEBDM</span>
+              <span class="degree-pill tech">PhD (Computer Science &amp; Engineering)</span>
+            </div>
+          </div>
+
+          <div class="legal-text-card">
+            <h4><i class="fa-solid fa-heart-pulse text-danger"></i> Good Intent &amp; Public Purpose</h4>
+            <p>
+              This application has been developed in good intent and for general public utility purposes based on open health directory datasets made publicly available through the <strong>Open Government Data (data.gov.in)</strong> portal and the <strong>Humanitarian Data Exchange (HDX / OpenStreetMap)</strong>.
+            </p>
+          </div>
+
+          <div class="legal-advisory-card">
+            <div class="advisory-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="advisory-text">
+              <strong>Ground Verification Advisory:</strong>
+              Users are earnestly requested to verify facility availability, emergency readiness, and specific services with local health authorities or frontline healthcare workers — such as <strong>ASHA</strong>, <strong>ANM</strong>, <strong>Health Supervisors</strong>, <strong>BMOH (Block Medical Officer of Health)</strong> / Block Medical Officers, or the concerned healthcare facility directly for surety.
+            </div>
+          </div>
+
+          <div class="developer-contact-card">
+            <h4><i class="fa-solid fa-envelope-circle-check text-primary"></i> Feedback, Corrections &amp; Suggestions</h4>
+            <p>For any errors, missing health facilities, bug reports, or suggestions for enhancement, please email:</p>
+            <div class="email-contact-box">
+              <a href="mailto:arka.doctor@gmail.com" class="email-link">
+                <i class="fa-solid fa-envelope"></i> arka.doctor@gmail.com
+              </a>
+              <button id="copyDevEmailBtn" class="btn-copy-email" type="button" title="Copy Email">
+                <i class="fa-regular fa-copy"></i> Copy
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Medical Disclaimer -->
+        <div id="tab-disclaimer" class="legal-tab-content">
+          <div class="emergency-alert-banner">
+            <i class="fa-solid fa-truck-medical"></i>
+            <div>
+              <strong>IN CASE OF MEDICAL EMERGENCY:</strong>
+              <div>Dial <strong>108</strong> (Ambulance), <strong>102</strong> (Maternal &amp; Child Health), or <strong>112</strong> (National Emergency Helpline) immediately.</div>
+            </div>
+          </div>
+
+          <div class="legal-text-section">
+            <h4>1. General Information Only</h4>
+            <p>AarogyaMap India is a geospatial directory tool designed to help citizens and healthcare professionals locate healthcare infrastructure across India. The content provided on this application does not constitute professional medical advice, medical diagnosis, clinical opinion, or treatment recommendations.</p>
+
+            <h4>2. No Doctor-Patient Relationship</h4>
+            <p>Use of this application, including viewing facility directories or routing directions, does not establish a doctor-patient relationship between the user and the developer, contributors, or listed health facilities.</p>
+
+            <h4>3. Ground Reality and Operational Dynamics</h4>
+            <p>Healthcare facilities operate dynamically. Bed capacity, operational status, physician attendance, availability of ICU/oxygen, and specialty departments are subject to change. Ground validation through local public health personnel (ASHA, ANM, BMOH) is always recommended.</p>
+
+            <h4>4. Shortest Route &amp; Directions</h4>
+            <p>Shortest path and distance estimates are computed via geodesic algorithms (Haversine) and open-source routing (OSRM). Real-time road closures, construction, weather hazards, or traffic congestion may affect travel time.</p>
+          </div>
+        </div>
+
+        <!-- Tab 3: Privacy Policy -->
+        <div id="tab-privacy" class="legal-tab-content">
+          <div class="legal-text-section">
+            <div class="privacy-badge-banner">
+              <i class="fa-solid fa-lock"></i> 100% Client-Side Privacy • Zero Telemetry • No Tracking
+            </div>
+
+            <h4>1. Zero Personal Health Data Collection</h4>
+            <p>We do not collect, store, or transmit any Personal Health Information (PHI) or Personally Identifiable Information (PII). No registration, mobile number, or sign-in is required to access the full features of this app.</p>
+
+            <h4>2. Device GPS / AGPS Location Handling</h4>
+            <p>When you enable location permissions on your mobile or web browser, your latitude and longitude coordinates are processed <strong>exclusively inside your local browser memory</strong> to calculate straight-line distances and shortest path routes to nearby facilities. Your coordinates are <strong>never sent to any server, database, or analytics provider</strong>.</p>
+
+            <h4>3. Offline Storage &amp; Progressive Web App (PWA)</h4>
+            <p>To enable resilient offline access during network blackouts, this application caches application shell assets and public directory datasets locally on your device via standard browser Service Workers and Cache API.</p>
+
+            <h4>4. Third-Party Map &amp; Routing Services</h4>
+            <p>Base map tiles and geodesic routes are fetched from OpenStreetMap, Humanitarian OpenStreetMap Team, Esri ArcGIS, and OSRM under standard non-tracking public API policies.</p>
+          </div>
+        </div>
+
+        <!-- Tab 4: Terms of Use -->
+        <div id="tab-terms" class="legal-tab-content">
+          <div class="legal-text-section">
+            <h4>1. Acceptance of Terms</h4>
+            <p>By accessing or using AarogyaMap India, you agree to be bound by these Terms of Use and all applicable laws and regulations.</p>
+
+            <h4>2. Permitted Use</h4>
+            <p>You may use this application for personal, humanitarian, public health research, educational, and non-commercial purposes. Automated scraping that exceeds reasonable rate limits or disrupts map tile servers is prohibited.</p>
+
+            <h4>3. Open Data Attribution &amp; Licenses</h4>
+            <p>
+              • <strong>Open Government Data (OGD) Platform India</strong> (data.gov.in): National Hospital Directory and All India Health Centres Directory.<br>
+              • <strong>OpenStreetMap contributors &amp; Humanitarian Data Exchange (HDX)</strong>: Licensed under the Open Database License (ODbL).
+            </p>
+
+            <h4>4. Limitation of Liability</h4>
+            <p>In no event shall the developer or contributors be liable for any direct, indirect, incidental, consequential, or exemplary damages arising out of the use or inability to use this platform or reliance on any directory information provided herein.</p>
+          </div>
         </div>
       </div>
     </div>

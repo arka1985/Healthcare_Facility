@@ -1,0 +1,464 @@
+{
+  "type": "Feature",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/projection/v2.0.0/schema.json",
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json"
+  ],
+  "id": "hotosm_ind_health_facilities-osm",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          68.5803224,
+          8.0829418
+        ],
+        [
+          97.017277,
+          8.0829418
+        ],
+        [
+          97.017277,
+          34.8482392
+        ],
+        [
+          68.5803224,
+          34.8482392
+        ],
+        [
+          68.5803224,
+          8.0829418
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    68.5803224,
+    8.0829418,
+    97.017277,
+    34.8482392
+  ],
+  "properties": {
+    "oex:category": "health_facilities",
+    "oex:source": "osm",
+    "oex:dataset_source": "OpenStreetMap (Geofabrik IND 2026-10-09)",
+    "oex:snapshot": "2026-10-09",
+    "oex:boundary": "geoBoundaries gbOpen ADM0",
+    "oex:version": "0.4.16",
+    "oex:pcode_source_date": "2025-07-29",
+    "oex:geometry_types": {
+      "POINT": 130808,
+      "POLYGON": 8838,
+      "MULTIPOLYGON": 17,
+      "LINESTRING": 1
+    },
+    "title": "Health Facilities of India",
+    "description": "139,664 features: 130,808 points, 8,838 polygons, 17 multipolygons, 1 line. 5 of 13 attributes are filled for at least half of the features.",
+    "license": "ODbL-1.0",
+    "created": "2026-10-11T21:31:19Z",
+    "keywords": [
+      "geodata",
+      "health",
+      "health facilities"
+    ],
+    "providers": [
+      {
+        "name": "OpenStreetMap (Geofabrik IND 2026-10-09)",
+        "roles": [
+          "producer",
+          "licensor"
+        ]
+      }
+    ],
+    "proj:code": "EPSG:4326",
+    "table:row_count": 139664,
+    "table:primary_geometry": "geom",
+    "table:columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "oex:null_count": 0,
+        "oex:null_percent": 0.0,
+        "oex:distinct_count": 136004,
+        "oex:top_values": []
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR",
+        "oex:null_count": 3328,
+        "oex:null_percent": 2.38,
+        "oex:distinct_count": 112666,
+        "oex:top_values": []
+      },
+      {
+        "name": "name_en",
+        "type": "VARCHAR",
+        "oex:null_count": 138083,
+        "oex:null_percent": 98.87,
+        "oex:distinct_count": 1449,
+        "oex:top_values": []
+      },
+      {
+        "name": "name_hi",
+        "type": "VARCHAR",
+        "oex:null_count": 137300,
+        "oex:null_percent": 98.31,
+        "oex:distinct_count": 2275,
+        "oex:top_values": []
+      },
+      {
+        "name": "amenity",
+        "type": "VARCHAR",
+        "oex:null_count": 42995,
+        "oex:null_percent": 30.78,
+        "oex:distinct_count": 36,
+        "oex:top_values": [
+          {
+            "value": "hospital",
+            "count": 53674
+          },
+          {
+            "value": "clinic",
+            "count": 21952
+          },
+          {
+            "value": "pharmacy",
+            "count": 7691
+          },
+          {
+            "value": "dentist",
+            "count": 6082
+          },
+          {
+            "value": "doctors",
+            "count": 3712
+          }
+        ]
+      },
+      {
+        "name": "building",
+        "type": "VARCHAR",
+        "oex:null_count": 135606,
+        "oex:null_percent": 97.09,
+        "oex:distinct_count": 34,
+        "oex:top_values": [
+          {
+            "value": "yes",
+            "count": 3662
+          },
+          {
+            "value": "hospital",
+            "count": 274
+          },
+          {
+            "value": "commercial",
+            "count": 31
+          },
+          {
+            "value": "house",
+            "count": 18
+          },
+          {
+            "value": "college",
+            "count": 9
+          }
+        ]
+      },
+      {
+        "name": "healthcare",
+        "type": "VARCHAR",
+        "oex:null_count": 54653,
+        "oex:null_percent": 39.13,
+        "oex:distinct_count": 113,
+        "oex:top_values": [
+          {
+            "value": "centre",
+            "count": 39180
+          },
+          {
+            "value": "hospital",
+            "count": 19431
+          },
+          {
+            "value": "clinic",
+            "count": 8539
+          },
+          {
+            "value": "pharmacy",
+            "count": 5274
+          },
+          {
+            "value": "yes",
+            "count": 4190
+          }
+        ]
+      },
+      {
+        "name": "healthcare_speciality",
+        "type": "VARCHAR",
+        "oex:null_count": 133787,
+        "oex:null_percent": 95.79,
+        "oex:distinct_count": 1567,
+        "oex:top_values": []
+      },
+      {
+        "name": "operator_type",
+        "type": "VARCHAR",
+        "oex:null_count": 130110,
+        "oex:null_percent": 93.16,
+        "oex:distinct_count": 44,
+        "oex:top_values": [
+          {
+            "value": "government",
+            "count": 6135
+          },
+          {
+            "value": "private",
+            "count": 3136
+          },
+          {
+            "value": "public",
+            "count": 117
+          },
+          {
+            "value": "charity",
+            "count": 37
+          },
+          {
+            "value": "ngo",
+            "count": 18
+          }
+        ]
+      },
+      {
+        "name": "capacity_persons",
+        "type": "VARCHAR",
+        "oex:null_count": 139664,
+        "oex:null_percent": 100.0,
+        "oex:distinct_count": 0,
+        "oex:top_values": []
+      },
+      {
+        "name": "addr_full",
+        "type": "VARCHAR",
+        "oex:null_count": 39503,
+        "oex:null_percent": 28.28,
+        "oex:distinct_count": 78459,
+        "oex:top_values": []
+      },
+      {
+        "name": "addr_city",
+        "type": "VARCHAR",
+        "oex:null_count": 130875,
+        "oex:null_percent": 93.71,
+        "oex:distinct_count": 2271,
+        "oex:top_values": []
+      },
+      {
+        "name": "source",
+        "type": "VARCHAR",
+        "oex:null_count": 139664,
+        "oex:null_percent": 100.0,
+        "oex:distinct_count": 0,
+        "oex:top_values": []
+      },
+      {
+        "name": "adm0_pcode",
+        "type": "VARCHAR",
+        "oex:null_count": 0,
+        "oex:null_percent": 0.0,
+        "oex:distinct_count": 1,
+        "oex:top_values": [
+          {
+            "value": "IND",
+            "count": 139664
+          }
+        ]
+      },
+      {
+        "name": "adm0_name",
+        "type": "VARCHAR",
+        "oex:null_count": 0,
+        "oex:null_percent": 0.0,
+        "oex:distinct_count": 1,
+        "oex:top_values": [
+          {
+            "value": "India",
+            "count": 139664
+          }
+        ]
+      },
+      {
+        "name": "adm1_pcode",
+        "type": "VARCHAR",
+        "oex:null_count": 1292,
+        "oex:null_percent": 0.93,
+        "oex:distinct_count": 34,
+        "oex:top_values": [
+          {
+            "value": "1811400B15614733245507",
+            "count": 15166
+          },
+          {
+            "value": "1811400B21167269026319",
+            "count": 12634
+          },
+          {
+            "value": "1811400B45534780755480",
+            "count": 11543
+          },
+          {
+            "value": "1811400B25711494603400",
+            "count": 9832
+          },
+          {
+            "value": "1811400B11231190780494",
+            "count": 9752
+          }
+        ]
+      },
+      {
+        "name": "adm1_name",
+        "type": "VARCHAR",
+        "oex:null_count": 1292,
+        "oex:null_percent": 0.93,
+        "oex:distinct_count": 34,
+        "oex:top_values": [
+          {
+            "value": "Mahārāshtra",
+            "count": 15166
+          },
+          {
+            "value": "Tamil Nādu",
+            "count": 12634
+          },
+          {
+            "value": "Kerala",
+            "count": 11543
+          },
+          {
+            "value": "Telangāna",
+            "count": 9832
+          },
+          {
+            "value": "Uttar Pradesh",
+            "count": 9752
+          }
+        ]
+      },
+      {
+        "name": "adm2_pcode",
+        "type": "VARCHAR",
+        "oex:null_count": 1292,
+        "oex:null_percent": 0.93,
+        "oex:distinct_count": 692,
+        "oex:top_values": [
+          {
+            "value": "76128533B76927648517269",
+            "count": 4427
+          },
+          {
+            "value": "76128533B60360721573267",
+            "count": 2333
+          },
+          {
+            "value": "76128533B71380851181380",
+            "count": 2164
+          },
+          {
+            "value": "76128533B75519739609062",
+            "count": 1512
+          },
+          {
+            "value": "76128533B83644689337946",
+            "count": 1472
+          }
+        ]
+      },
+      {
+        "name": "adm2_name",
+        "type": "VARCHAR",
+        "oex:null_count": 1292,
+        "oex:null_percent": 0.93,
+        "oex:distinct_count": 685,
+        "oex:top_values": [
+          {
+            "value": "Bangalore",
+            "count": 4427
+          },
+          {
+            "value": "Indore",
+            "count": 2333
+          },
+          {
+            "value": "Pune",
+            "count": 2164
+          },
+          {
+            "value": "Ernakulam",
+            "count": 1512
+          },
+          {
+            "value": "Kancheepuram",
+            "count": 1472
+          }
+        ]
+      },
+      {
+        "name": "adm3_pcode",
+        "type": "VARCHAR",
+        "oex:null_count": 1292,
+        "oex:null_percent": 0.93,
+        "oex:distinct_count": 6045,
+        "oex:top_values": []
+      },
+      {
+        "name": "adm3_name",
+        "type": "VARCHAR",
+        "oex:null_count": 1292,
+        "oex:null_percent": 0.93,
+        "oex:distinct_count": 5784,
+        "oex:top_values": []
+      },
+      {
+        "name": "adm4_pcode",
+        "type": "VARCHAR",
+        "oex:null_count": 139664,
+        "oex:null_percent": 100.0,
+        "oex:distinct_count": 0,
+        "oex:top_values": []
+      },
+      {
+        "name": "adm4_name",
+        "type": "VARCHAR",
+        "oex:null_count": 139664,
+        "oex:null_percent": 100.0,
+        "oex:distinct_count": 0,
+        "oex:top_values": []
+      },
+      {
+        "name": "name_latin",
+        "type": "VARCHAR",
+        "oex:null_count": 3017,
+        "oex:null_percent": 2.16,
+        "oex:distinct_count": 112834,
+        "oex:top_values": []
+      }
+    ],
+    "datetime": "2026-10-09T00:00:00Z"
+  },
+  "links": [
+    {
+      "rel": "license",
+      "href": "https://opendatacommons.org/licenses/odbl/1-0/",
+      "title": "Open Database License (ODC-ODbL)"
+    },
+    {
+      "rel": "root",
+      "href": "https://production-raw-data-api.s3.amazonaws.com/ISO3/catalog.json",
+      "type": "application/json"
+    }
+  ],
+  "assets": {}
+}
