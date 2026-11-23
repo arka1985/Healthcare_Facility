@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <filter id="wc-blur-user" x="-30%" y="-30%" width="160%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <radialGradient id="userGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#0284c7" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#bae6fd" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pinkPin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fda4af"/>
+      <stop offset="50%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer watercolor ripple -->
+  <circle cx="50" cy="50" r="44" fill="url(#userGlow)" filter="url(#wc-blur-user)"/>
+  <circle cx="50" cy="50" r="32" fill="#e0f2fe" opacity="0.6" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <circle cx="50" cy="50" r="22" fill="#ffffff" stroke="#0284c7" stroke-width="2.5"/>
+
+  <!-- Inner User Beacon Pin -->
+  <circle cx="50" cy="50" r="14" fill="url(#pinkPin)" stroke="#ffffff" stroke-width="3"/>
+  <circle cx="50" cy="50" r="5" fill="#ffffff"/>
+  
+  <!-- GPS pulse indicator -->
+  <path d="M 50,14 L 50,22 M 50,78 L 50,86 M 14,50 L 22,50 M 78,50 L 86,50" 
+        stroke="#0284c7" stroke-width="2" stroke-linecap="round"/>
+</svg>

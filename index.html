@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>AarogyaMap India - Healthcare Facilities Directory</title>
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AarogyaMap">
+  <meta name="description" content="Map healthcare facilities in India using OpenStreetMap, mobile GPS/AGPS, distance calculation, shortest path routing and national hospital directory data.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+
+  <!-- Custom Styles: Sky Blue & Pink Watercolor Theme -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- App Main Wrapper -->
+  <div class="app-container">
+
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <button id="sidebarToggleBtn" class="icon-btn-ghost" title="Toggle List">
+          <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+        <div class="brand-wrapper">
+          <img src="assets/cliparts/logo.svg" alt="AarogyaMap India Logo" class="brand-logo">
+        </div>
+      </div>
+
+      <!-- Center Quick City & Mode Bar -->
+      <div class="header-center">
+        <!-- City Jump Preset -->
+        <div class="city-selector-wrap">
+          <i class="fa-solid fa-city city-icon"></i>
+          <select id="cityQuickJump" class="city-select" title="Quick Jump to City">
+            <option value="">Jump to City / Metro...</option>
+            <option value="28.6139,77.2090">New Delhi / NCR</option>
+            <option value="19.0760,72.8777">Mumbai, Maharashtra</option>
+            <option value="12.9716,77.5946">Bengaluru, Karnataka</option>
+            <option value="22.5726,88.3639">Kolkata, West Bengal</option>
+            <option value="13.0827,80.2707">Chennai, Tamil Nadu</option>
+            <option value="17.3850,78.4867">Hyderabad, Telangana</option>
+            <option value="18.5204,73.8567">Pune, Maharashtra</option>
+            <option value="23.0225,72.5714">Ahmedabad, Gujarat</option>
+            <option value="26.8467,80.9462">Lucknow, Uttar Pradesh</option>
+            <option value="26.9124,75.7873">Jaipur, Rajasthan</option>
+            <option value="8.5241,76.9366">Thiruvananthapuram, Kerala</option>
+            <option value="25.5941,85.1376">Patna, Bihar</option>
+            <option value="11.6234,92.7265">Port Blair, Andaman</option>
+          </select>
+        </div>
+
+        <!-- Data Source Status Pill -->
+        <button id="dataSourceBadge" class="data-badge-pill" title="Click to view API & CSV sync details">
+          <span class="pulse-dot"></span>
+          <span id="dataSourceLabel">Checking API...</span>
+          <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 4px;"></i>
+        </button>
+      </div>
+
+      <!-- Header Action Buttons -->
+      <div class="header-right">
+        <!-- GPS Locate Button -->
+        <button id="headerLocateBtn" class="btn-locate" title="Find My Location (GPS / AGPS)">
+          <i class="fa-solid fa-crosshairs"></i>
+          <span class="locate-text">My GPS</span>
+        </button>
+
+        <!-- Route Mode Button -->
+        <button id="routePanelBtn" class="btn-route-toggle" title="View Active Route Directions" style="display: none;">
+          <i class="fa-solid fa-route"></i>
+          <span id="routeNavText">Route</span>
+        </button>
+
+        <!-- PWA Install Button -->
+        <button id="pwaInstallBtn" class="btn-install" style="display: none;" title="Install as Mobile App">
+          <i class="fa-solid fa-download"></i>
+          <span>Install</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area: Sidebar + Map -->
+    <div class="main-layout">
+
+      <!-- Left Sidebar: Search, Filters & Facilities List -->
+      <aside id="appSidebar" class="app-sidebar">
+        <!-- Search & Filter Controls Container -->
+        <div class="sidebar-header">
+          <!-- Live Search Input -->
+          <div class="search-box-wrap">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="facilitySearchInput" placeholder="Search hospital, city, district, pincode..." autocomplete="off">
+            <button id="clearSearchBtn" class="btn-clear-search" style="display: none;">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Watercolor Category Filter Chips -->
+          <div class="filter-chips-scroll">
+            <button class="filter-chip active" data-category="all">
+              <span class="chip-dot"></span> All Facilities
+            </button>
+            <button class="filter-chip" data-category="public">
+              <img src="assets/icons/hospital.svg" class="chip-icon-svg" alt=""> Govt / Public
+            </button>
+            <button class="filter-chip" data-category="private">
+              <img src="assets/icons/clinic.svg" class="chip-icon-svg" alt=""> Private
+            </button>
+            <button class="filter-chip" data-category="dis_h">
+              <i class="fa-solid fa-hospital" style="color: #0284c7; font-size: 13px;"></i> District Hosp
+            </button>
+            <button class="filter-chip" data-category="chc">
+              <i class="fa-solid fa-house-medical" style="color: #0ea5e9; font-size: 13px;"></i> CHC
+            </button>
+            <button class="filter-chip" data-category="phc">
+              <i class="fa-solid fa-clinic-medical" style="color: #10b981; font-size: 13px;"></i> PHC
+            </button>
+            <button class="filter-chip" data-category="emergency">
+              <img src="assets/icons/emergency.svg" class="chip-icon-svg" alt=""> 24x7 Emergency
+            </button>
+            <button class="filter-chip" data-category="bloodbank">
+              <img src="assets/icons/bloodbank.svg" class="chip-icon-svg" alt=""> Blood Bank
+            </button>
+            <button class="filter-chip" data-category="ayush">
+              <img src="assets/icons/ayush.svg" class="chip-icon-svg" alt=""> Ayush / Herbal
+            </button>
+          </div>
+
+          <!-- Secondary Filters Row (State, Distance, Sorting) -->
+          <div class="filter-row-secondary">
+            <div class="filter-dropdown-wrap">
+              <select id="stateFilterSelect" class="filter-select">
+                <option value="all">All States / UTs</option>
+              </select>
+            </div>
+            
+            <div class="filter-dropdown-wrap">
+              <select id="distanceFilterSelect" class="filter-select">
+                <option value="all">Any Distance</option>
+                <option value="5">&lt; 5 km radius</option>
+                <option value="10">&lt; 10 km radius</option>
+                <option value="25">&lt; 25 km radius</option>
+                <option value="50">&lt; 50 km radius</option>
+              </select>
+            </div>
+
+            <div class="filter-dropdown-wrap">
+              <select id="sortFilterSelect" class="filter-select">
+                <option value="nearest">Nearest to Me</option>
+                <option value="name">Name (A-Z)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Status / Results Count Banner -->
+          <div class="results-count-bar">
+            <div class="count-left">
+              <span id="resultsCount">0</span> facilities found
+              <span id="gpsDistanceNotice" class="gps-hint-badge" style="display: none;">
+                <i class="fa-solid fa-location-dot"></i> from your GPS
+              </span>
+            </div>
+            <button id="resetFiltersBtn" class="btn-link-reset" title="Reset all filters">Reset</button>
+          </div>
+        </div>
+
+        <!-- Facilities Cards List (Virtual scrollable) -->
+        <div id="facilitiesList" class="facilities-cards-container">
+          <!-- Loading placeholder cards -->
+          <div class="facility-card skeleton-card">
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line subtitle"></div>
+            <div class="skeleton-line text"></div>
+          </div>
+          <div class="facility-card skeleton-card">
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line subtitle"></div>
+            <div class="skeleton-line text"></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Map Display Container -->
+      <main class="map-view-container">
+        <!-- Leaflet Map Div -->
+        <div id="map" class="leaflet-map-canvas"></div>
+
+        <!-- Floating Quick Map Overlay Controls -->
+        <div class="map-floating-controls">
+          <!-- GPS Tracker Toggle (AGPS / Live Follow) -->
+          <button id="liveTrackingBtn" class="map-floating-btn" title="Toggle Live AGPS Tracking">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span class="btn-tooltip">Live Tracking</span>
+          </button>
+
+          <!-- Recenter Map Button -->
+          <button id="recenterBtn" class="map-floating-btn" title="Fit All Facilities / India">
+            <i class="fa-solid fa-expand"></i>
+            <span class="btn-tooltip">Fit View</span>
+          </button>
+
+          <!-- Layer Switcher Button -->
+          <button id="layerToggleBtn" class="map-floating-btn" title="Map Layers & Tile Styles">
+            <i class="fa-solid fa-layer-group"></i>
+            <span class="btn-tooltip">Styles</span>
+          </button>
+        </div>
+
+        <!-- Map Layer Switcher Modal / Dropdown -->
+        <div id="layerPickerModal" class="layer-picker-card" style="display: none;">
+          <div class="layer-picker-header">
+            <h4>Map Style</h4>
+            <button id="closeLayerPicker" class="btn-icon-xs"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="layer-options-list">
+            <label class="layer-radio-item active">
+              <input type="radio" name="mapTileLayer" value="osm" checked>
+              <span class="layer-radio-label">
+                <strong>OpenStreetMap Standard</strong>
+                <small>Official global street tiles (Free, No API key)</small>
+              </span>
+            </label>
+            <label class="layer-radio-item">
+              <input type="radio" name="mapTileLayer" value="esri_street">
+              <span class="layer-radio-label">
+                <strong>Esri World Street</strong>
+                <small>Clean pastel street details (Free, No API key)</small>
+              </span>
+            </label>
+            <label class="layer-radio-item">
+              <input type="radio" name="mapTileLayer" value="humanitarian">
+              <span class="layer-radio-label">
+                <strong>OSM Humanitarian (HOT)</strong>
+                <small>Enhanced medical & emergency infrastructure</small>
+              </span>
+            </label>
+            <label class="layer-radio-item">
+              <input type="radio" name="mapTileLayer" value="satellite">
+              <span class="layer-radio-label">
+                <strong>Esri World Imagery</strong>
+                <small>High resolution satellite aerial</small>
+              </span>
+            </label>
+          </div>
+
+          <!-- India Map Overlay Section -->
+          <div class="layer-overlay-box" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--slate-200);">
+            <div style="font-size: 11.5px; font-weight: 700; color: var(--slate-600); text-transform: uppercase; margin-bottom: 6px;">Map Overlays</div>
+            <label class="layer-checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px; border-radius: var(--radius-sm); background: var(--sky-50);">
+              <input type="checkbox" id="indiaOverlayCheckbox" checked>
+              <div>
+                <strong style="font-size: 12px; color: var(--slate-800);">🇮🇳 India State Boundaries</strong>
+                <small style="display:block; font-size: 10.5px; color: var(--slate-500);">Interactive borders &amp; state zoom</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Floating GPS Coordinates & Accuracy HUD -->
+        <div id="gpsHudCard" class="gps-hud-card" style="display: none;">
+          <div class="gps-hud-indicator">
+            <div class="radar-ping"></div>
+            <i class="fa-solid fa-location-crosshairs text-primary"></i>
+          </div>
+          <div class="gps-hud-details">
+            <div class="gps-hud-title">GPS Location Active</div>
+            <div class="gps-hud-coords" id="gpsHudCoords">Lat: 0.0000, Lng: 0.0000</div>
+            <div class="gps-hud-acc" id="gpsHudAcc">Accuracy: ±0 m</div>
+          </div>
+          <button id="closeGpsHud" class="btn-icon-xs" title="Dismiss HUD"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- Floating Route Directions Card -->
+        <div id="activeRouteFloatingCard" class="active-route-floating" style="display: none;">
+          <div class="route-quick-stats">
+            <div class="route-stat-item">
+              <i class="fa-solid fa-car-side stat-icon"></i>
+              <div>
+                <div class="stat-value" id="routeDistVal">-- km</div>
+                <div class="stat-label">Distance</div>
+              </div>
+            </div>
+            <div class="route-stat-item">
+              <i class="fa-solid fa-clock stat-icon"></i>
+              <div>
+                <div class="stat-value" id="routeTimeVal">-- mins</div>
+                <div class="stat-label">Estimated Time</div>
+              </div>
+            </div>
+          </div>
+          <div class="route-actions-row">
+            <button id="viewTurnByTurnBtn" class="btn-route-action primary">
+              <i class="fa-solid fa-list-ol"></i> Step Directions
+            </button>
+            <button id="openNativeMapsBtn" class="btn-route-action secondary">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Google Maps
+            </button>
+            <button id="clearRouteBtn" class="btn-route-action danger" title="Clear Route">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+
+      </main>
+
+    </div>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav">
+      <button class="mobile-tab-btn active" data-tab="map">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <span>Map</span>
+      </button>
+      <button class="mobile-tab-btn" data-tab="list">
+        <i class="fa-solid fa-hospital"></i>
+        <span>Hospitals</span>
+      </button>
+      <button class="mobile-tab-btn" data-tab="locate">
+        <i class="fa-solid fa-crosshairs"></i>
+        <span>My GPS</span>
+      </button>
+      <button class="mobile-tab-btn" data-tab="route">
+        <i class="fa-solid fa-route"></i>
+        <span>Route</span>
+      </button>
+      <button class="mobile-tab-btn" data-tab="sync">
+        <i class="fa-solid fa-cloud-arrow-down"></i>
+        <span>Data &amp; API</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Turn-by-Turn Navigation Modal / Bottom Sheet -->
+  <div id="directionsModal" class="app-modal" style="display: none;">
+    <div class="modal-backdrop" id="closeDirectionsBackdrop"></div>
+    <div class="modal-sheet-dialog">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-sheet-header">
+        <div class="modal-header-title">
+          <img src="assets/icons/pin_destination.svg" class="modal-dest-icon" alt="">
+          <div>
+            <h3 id="directionsDestTitle">Navigation Directions</h3>
+            <p id="directionsSummary" class="text-muted">Calculating shortest route...</p>
+          </div>
+        </div>
+        <button id="closeDirectionsBtn" class="btn-icon-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <!-- Travel Mode Selector: Car vs Walking -->
+      <div class="travel-mode-tabs">
+        <button class="travel-mode-tab active" data-mode="driving">
+          <i class="fa-solid fa-car"></i> Driving
+        </button>
+        <button class="travel-mode-tab" data-mode="walking">
+          <i class="fa-solid fa-person-walking"></i> Walking
+        </button>
+      </div>
+
+      <!-- Turn-by-Turn Steps List -->
+      <div id="directionsStepsList" class="directions-steps-container">
+        <!-- Steps rendered dynamically via app.js -->
+      </div>
+
+      <div class="modal-sheet-footer">
+        <button id="directionsGoogleMapsBtn" class="btn-sheet-external">
+          <i class="fa-solid fa-diamond-turn-right"></i> Open in Google Maps
+        </button>
+        <button id="directionsClearBtn" class="btn-sheet-clear">
+          <i class="fa-solid fa-xmark"></i> End Route
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Source & API Sync Modal -->
+  <div id="dataSyncModal" class="app-modal" style="display: none;">
+    <div class="modal-backdrop" id="closeSyncBackdrop"></div>
+    <div class="modal-sheet-dialog">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-sheet-header">
+        <div class="modal-header-title">
+          <i class="fa-solid fa-database text-primary" style="font-size: 24px; margin-right: 10px;"></i>
+          <div>
+            <h3>Data Source &amp; National Hospital Directory API</h3>
+            <p class="text-muted">Data.gov.in Government API &amp; Fallback Dataset</p>
+          </div>
+        </div>
+        <button id="closeSyncBtn" class="btn-icon-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="sync-modal-body">
+        <!-- Current Status Banner -->
+        <div class="sync-status-card" id="syncStatusCard">
+          <div class="sync-status-icon">
+            <i class="fa-solid fa-circle-check text-success"></i>
+          </div>
+          <div class="sync-status-info">
+            <h4 id="syncStatusHeadline">Dataset Loaded</h4>
+            <p id="syncStatusDesc">Loaded 10,605 geocoded healthcare facilities across India.</p>
+          </div>
+        </div>
+
+        <!-- API Configuration Info -->
+        <div class="api-info-block">
+          <label class="info-label">Active Government API Resource</label>
+          <select id="apiResourceSelect" class="filter-select" style="font-weight: 600; color: #0284c7;">
+            <option value="db2e3a80-ea7a-4ead-987a-9564fcee3c08" selected>All India Health Centres Directory (db2e3a80...)</option>
+            <option value="98fa254e-c5f8-4910-a19b-4828939b477d">National Hospital Directory with Geo Code (98fa254e...)</option>
+          </select>
+
+          <label class="info-label" style="margin-top: 6px;">User API Key</label>
+          <div class="api-key-box">
+            <input type="text" id="apiKeyInput" value="579b464db66ec23bdd00000110fade4c7b7240d551e6727d99c0993a" readonly>
+            <button id="copyApiKeyBtn" class="btn-copy" title="Copy API Key"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 6px;">
+            <div style="flex: 1;">
+              <label class="info-label">Fetch Limit</label>
+              <select id="apiFetchLimit" class="filter-select">
+                <option value="50">50 latest records</option>
+                <option value="100" selected>100 latest records</option>
+                <option value="500">500 records</option>
+                <option value="1000">1000 records</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label class="info-label">Offline Dataset</label>
+              <select id="offlineDatasetSelect" class="filter-select">
+                <option value="primary" selected>Primary (18,225 Facilities)</option>
+                <option value="full">Full (47,789 Facilities)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="sync-action-buttons">
+          <button id="triggerApiSyncBtn" class="btn-primary-action">
+            <i class="fa-solid fa-arrows-rotate"></i> Fetch Latest from API
+          </button>
+          <button id="loadFallbackCsvBtn" class="btn-secondary-action">
+            <i class="fa-solid fa-file-csv"></i> Reload Fallback Dataset
+          </button>
+        </div>
+
+        <!-- Custom CSV Drag & Drop / Upload -->
+        <div class="custom-csv-upload-box">
+          <i class="fa-solid fa-file-arrow-up upload-icon"></i>
+          <p>Or load a custom <strong>hospital_directory.csv</strong> file directly</p>
+          <input type="file" id="customCsvInput" accept=".csv" style="display: none;">
+          <button id="browseCsvBtn" class="btn-link-action">Browse CSV File</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Facility Detail Modal -->
+  <div id="facilityDetailModal" class="app-modal" style="display: none;">
+    <div class="modal-backdrop" id="closeFacilityBackdrop"></div>
+    <div class="modal-sheet-dialog">
+      <div class="modal-sheet-handle"></div>
+      <div class="modal-sheet-header">
+        <div class="modal-header-title">
+          <img id="facilityDetailIcon" src="assets/icons/hospital.svg" class="modal-dest-icon" alt="">
+          <div>
+            <h3 id="facilityDetailName">Hospital Name</h3>
+            <span id="facilityDetailCategory" class="badge-category">General</span>
+            <span id="facilityDetailCareType" class="badge-type">Hospital</span>
+          </div>
+        </div>
+        <button id="closeFacilityBtn" class="btn-icon-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="facility-modal-content">
+        <!-- Distance & GPS status -->
+        <div class="detail-distance-banner" id="facilityDetailDistanceWrap" style="display: none;">
+          <i class="fa-solid fa-location-arrow"></i>
+          <span id="facilityDetailDistance">-- km from your location</span>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="detail-info-grid">
+          <div class="detail-item">
+            <div class="detail-label"><i class="fa-solid fa-map-pin"></i> Address</div>
+            <div class="detail-val" id="facilityDetailAddress">--</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label"><i class="fa-solid fa-city"></i> District &amp; State</div>
+            <div class="detail-val" id="facilityDetailLocation">--</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label"><i class="fa-solid fa-mail-bulk"></i> Pincode</div>
+            <div class="detail-val" id="facilityDetailPincode">--</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label"><i class="fa-solid fa-phone"></i> Telephone / Contact</div>
+            <div class="detail-val" id="facilityDetailPhone">--</div>
+          </div>
+          <div class="detail-item" id="facilityDetailAmbulanceWrap">
+            <div class="detail-label"><i class="fa-solid fa-truck-medical"></i> Ambulance Phone</div>
+            <div class="detail-val" id="facilityDetailAmbulance">--</div>
+          </div>
+          <div class="detail-item" id="facilityDetailBloodBankWrap">
+            <div class="detail-label"><i class="fa-solid fa-droplet"></i> Blood Bank Phone</div>
+            <div class="detail-val" id="facilityDetailBloodBank">--</div>
+          </div>
+          <div class="detail-item" id="facilityDetailBedsWrap">
+            <div class="detail-label"><i class="fa-solid fa-bed"></i> Total Beds</div>
+            <div class="detail-val" id="facilityDetailBeds">--</div>
+          </div>
+          <div class="detail-item" id="facilityDetailSystemWrap">
+            <div class="detail-label"><i class="fa-solid fa-dna"></i> System of Medicine</div>
+            <div class="detail-val" id="facilityDetailSystem">Allopathic</div>
+          </div>
+        </div>
+
+        <!-- Specialties & Facilities tags -->
+        <div id="facilityDetailSpecialtiesWrap" class="detail-tags-section" style="display: none;">
+          <div class="detail-label"><i class="fa-solid fa-stethoscope"></i> Specialties</div>
+          <div class="tags-container" id="facilityDetailSpecialties"></div>
+        </div>
+
+        <div id="facilityDetailFacilitiesWrap" class="detail-tags-section" style="display: none;">
+          <div class="detail-label"><i class="fa-solid fa-kit-medical"></i> Facilities</div>
+          <div class="tags-container" id="facilityDetailFacilities"></div>
+        </div>
+      </div>
+
+      <div class="modal-sheet-footer">
+        <button id="facilityDetailRouteBtn" class="btn-sheet-route">
+          <i class="fa-solid fa-route"></i> Shortest Route &amp; Directions
+        </button>
+        <a id="facilityDetailCallLink" href="#" class="btn-sheet-call">
+          <i class="fa-solid fa-phone"></i> Call Facility
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- PapaParse for direct client CSV parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- India State Boundaries GeoJSON Dataset (Offline Ready for GitHub Pages) -->
+  <script src="INDIA/india_data.js"></script>
+
+  <!-- Core Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>

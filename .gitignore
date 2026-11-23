@@ -1,0 +1,15 @@
+# Environment & OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp

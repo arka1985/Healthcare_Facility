@@ -1,0 +1,25 @@
+{
+  "name": "AarogyaMap India - Healthcare Facilities Directory",
+  "short_name": "AarogyaMap",
+  "description": "Find nearest hospitals, emergency clinics, blood banks, and healthcare facilities across India with live GPS and shortest path routing.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#38bdf8",
+  "categories": ["medical", "health", "navigation", "utilities"],
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
