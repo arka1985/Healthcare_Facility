@@ -419,16 +419,30 @@ function mergeApiRecords(records) {
   const mapped = parseRecords(records);
   if (mapped.length === 0) return;
 
-  const existingKeys = new Set(
-    state.hospitals.slice(0, 5000).map(h => `${(h.name || '').toLowerCase()}_${Number(h.lat).toFixed(3)}_${Number(h.lng).toFixed(3)}`)
-  );
+  const existingMap = new Map();
+  state.hospitals.forEach(h => {
+    const lat = Number(h.lat).toFixed(3);
+    const lng = Number(h.lng).toFixed(3);
+    const clean = (h.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    existingMap.set(`${clean}_${lat}_${lng}`, true);
+    existingMap.set(`${lat}_${lng}`, clean);
+  });
 
   const newItems = [];
   mapped.forEach(item => {
-    const key = `${(item.name || '').toLowerCase()}_${Number(item.lat).toFixed(3)}_${Number(item.lng).toFixed(3)}`;
-    if (!existingKeys.has(key)) {
+    const lat = Number(item.lat).toFixed(3);
+    const lng = Number(item.lng).toFixed(3);
+    const clean = (item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const fullKey = `${clean}_${lat}_${lng}`;
+
+    if (!existingMap.has(fullKey)) {
+      // Avoid inserting identical name at same coordinates
+      const prevClean = existingMap.get(`${lat}_${lng}`);
+      if (prevClean && (clean === prevClean || clean.includes(prevClean) || prevClean.includes(clean))) {
+        return; // skip duplicate
+      }
       newItems.push(item);
-      existingKeys.add(key);
+      existingMap.set(fullKey, true);
     }
   });
 
@@ -1003,9 +1017,27 @@ function renderMarkers(facilities) {
 
   // If there are many facilities, we add them in batch
   const markers = [];
+  const coordCounts = new Map();
+
   facilities.forEach(h => {
+    let lat = Number(h.lat);
+    let lng = Number(h.lng);
+
+    // If multiple distinct facilities share the exact same centroid coordinates,
+    // disperse them slightly in a micro-circle (~20m) so both are visible
+    const coordKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+    const count = coordCounts.get(coordKey) || 0;
+    coordCounts.set(coordKey, count + 1);
+
+    if (count > 0) {
+      const angle = count * (2 * Math.PI / 5) + (count * 0.4);
+      const jitterDist = 0.00018; // ~18-20 meters
+      lat += jitterDist * Math.cos(angle);
+      lng += (jitterDist / Math.max(0.2, Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+    }
+
     const icon = getHospitalMarkerIcon(h);
-    const m = L.marker([h.lat, h.lng], { icon: icon });
+    const m = L.marker([lat, lng], { icon: icon });
 
     // Popup content with action buttons
     m.bindPopup(() => {
