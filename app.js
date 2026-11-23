@@ -1651,9 +1651,6 @@ function setupEventListeners() {
   }
 
   // About Developer & Legal Modal Triggers
-  const headerAboutBtn = document.getElementById('headerAboutBtn');
-  if (headerAboutBtn) headerAboutBtn.addEventListener('click', () => openLegalModal('tab-developer'));
-
   const openAboutCardBtn = document.getElementById('openAboutCardBtn');
   if (openAboutCardBtn) openAboutCardBtn.addEventListener('click', () => openLegalModal('tab-developer'));
 
