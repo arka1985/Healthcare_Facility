@@ -485,9 +485,18 @@ function parseRecords(records) {
     const subdistName = r.Subdistrict_Name || r.subdistrict_name || r.Subdistrict || '';
 
     // Auto-correct government dataset clerical typos:
+    // Maleshemau (Lucknow, UP) was entered with 31.97714 instead of 26.97714
+    if (name.toLowerCase().includes('maleshemau') || (lat > 31.0 && districtName.toLowerCase().includes('lucknow'))) {
+      lat = 26.97714;
+      lng = 81.22459;
+    }
     // SIKANDERPUR (Kannauj, UP) was entered with 37.13633 instead of 27.13633
     if (lat > 35.0 && (stateName.toLowerCase().includes('uttar pradesh') || districtName.toLowerCase().includes('kannauj'))) {
       lat -= 10.0;
+    }
+    // Tarkulwa (Deoria, UP) was entered with lng 93.92345 instead of 83.92345
+    if (lng > 90.0 && districtName.toLowerCase().includes('deoria')) {
+      lng = 83.92345;
     }
     // Sevar (Dhaulpur, Rajasthan) was entered with 6.64679 instead of 26.64679
     if (lat < 10.0 && stateName.toLowerCase().includes('rajasthan')) {
@@ -496,6 +505,11 @@ function parseRecords(records) {
 
     // Strict validation: Coordinates must be valid and strictly inside India's geographic bounds
     if (isNaN(lat) || isNaN(lng) || lat < 6.5 || lat > 37.1 || lng < 68.0 || lng > 97.5) return;
+
+    // Hard International Borders: Zero tolerance for points in China / Tibet / Pakistan
+    if (lng > 78.5 && lat > 31.0) return; // Tibet / China
+    if (lng > 88.0 && lat > 28.2) return; // Tibet / China
+    if (lng < 68.2 && lat > 24.0) return; // Pakistan
     const ftype = (r.Facility_Type || r.facility_type || '').toLowerCase();
     const careType = typeMap[ftype] || r.Hospital_Care_Type || r.hospital_care_type || r.Type_Of_Facility || 'Health Centre';
     const category = r.Hospital_Category || r.hospital_category || 'Public / Government';
@@ -1040,6 +1054,9 @@ function renderMarkers(facilities) {
     let lat = Number(h.lat);
     let lng = Number(h.lng);
     if (isNaN(lat) || isNaN(lng)) return;
+
+    // Hard International Boundary Guard: Never render markers in China / Tibet / Pakistan
+    if ((lng > 78.5 && lat > 31.0) || (lng > 88.0 && lat > 28.2) || (lng < 68.2 && lat > 24.0)) return;
 
     // 2. Prevent rendering duplicate facilities sharing the same coordinates (~25m) and matching name
     const norm = (h.name || '').toLowerCase()
