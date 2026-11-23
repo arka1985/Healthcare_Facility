@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aarogyamap-cache-v10';
+const CACHE_NAME = 'aarogyamap-cache-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

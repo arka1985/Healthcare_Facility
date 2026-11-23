@@ -1508,7 +1508,6 @@ function setupEventListeners() {
   }
 
   toggleBtn.addEventListener('click', () => {
-    toggleBtn.classList.remove('hamburger-pulse'); // Stop pulsing once user has interacted
     if (window.innerWidth <= 900) {
       const isOpen = sidebar.classList.toggle('mobile-open');
       updateSidebarToggleIcon(isOpen);
