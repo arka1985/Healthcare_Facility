@@ -30,13 +30,29 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 
   <!-- Custom Styles: Sky Blue & Pink Watercolor Theme -->
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link rel="stylesheet" href="styles.css?v=13">
 
-  <!-- Trailing Slash Normalization for GitHub Pages relative asset paths -->
+  <!-- Automated Cache Invalidation & Normalization for Mobile and Desktop Browsers -->
   <script>
     (function() {
+      // 1. Trailing slash normalization for GitHub Pages relative asset paths
       if (location.pathname && !location.pathname.endsWith('/') && !location.pathname.includes('.')) {
         location.replace(location.pathname + '/' + location.search + location.hash);
+      }
+
+      // 2. Automatic mobile cache purge for clean dataset update (v13)
+      const CURRENT_APP_VERSION = 'v13_clean';
+      if ('caches' in window && localStorage.getItem('aarogya_app_version') !== CURRENT_APP_VERSION) {
+        caches.keys().then(function(names) {
+          return Promise.all(names.map(function(name) { return caches.delete(name); }));
+        }).then(function() {
+          localStorage.setItem('aarogya_app_version', CURRENT_APP_VERSION);
+          if (navigator.serviceWorker) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              for (var reg of regs) { reg.update(); }
+            });
+          }
+        });
       }
     })();
   </script>
@@ -817,6 +833,6 @@
   <script src="data/hospitals_failsafe.js"></script>
 
   <!-- Core Application Script -->
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

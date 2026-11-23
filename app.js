@@ -25,7 +25,13 @@ const CONFIG = {
 // Global App State
 const state = {
   hospitals: (typeof window !== 'undefined' && Array.isArray(window.DEFAULT_HOSPITALS_DATA) && window.DEFAULT_HOSPITALS_DATA.length > 0)
-    ? [...window.DEFAULT_HOSPITALS_DATA]
+    ? window.DEFAULT_HOSPITALS_DATA.filter(h => {
+        const lat = Number(h.lat);
+        const lng = Number(h.lng);
+        if (isNaN(lat) || isNaN(lng)) return false;
+        if ((lng > 78.5 && lat > 31.0) || (lng > 88.0 && lat > 28.2) || (lng < 68.2 && lat > 24.0)) return false;
+        return true;
+      })
     : [],
   filtered: [],
   userCoords: null, // [lat, lng]
@@ -390,12 +396,45 @@ async function loadFallbackDataset(customPath) {
     // Resolve path relative to current repo base directory, supporting trailing slash
     const baseHref = window.location.href.split('?')[0].split('#')[0];
     const baseUrl = baseHref.substring(0, baseHref.lastIndexOf('/') + 1);
-    const fetchUrl = new URL(filePath, baseUrl).href;
+    // Append dataset version hash to bypass mobile device HTTP disk cache
+    const DATA_CACHE_KEY = 'v13_clean';
+    const fetchUrl = new URL(filePath + (filePath.includes('?') ? '&' : '?') + 'v=' + DATA_CACHE_KEY, baseUrl).href;
 
     const res = await fetch(fetchUrl);
     if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${fetchUrl}`);
-    const data = await res.json();
+    let data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
+      // In-memory boundary guard & auto-corrector:
+      // Guarantees zero out-of-bounds locations even if an older cached JSON was served
+      data = data.filter(h => {
+        let lat = Number(h.lat);
+        let lng = Number(h.lng);
+        if (isNaN(lat) || isNaN(lng)) return false;
+
+        // Auto-fix Maleshemau & Sikanderpur in memory
+        if (h.id === 46134 || (h.name && h.name.toLowerCase().includes('maleshemau'))) {
+          h.lat = 26.97714;
+          h.lng = 81.22459;
+          lat = 26.97714;
+          lng = 81.22459;
+        }
+        if (h.id === 46135 || (h.name && h.name.toLowerCase().includes('sikanderpur') && h.district && h.district.toLowerCase().includes('kannauj'))) {
+          h.lat = 27.13633;
+          h.lng = 79.58879;
+          lat = 27.13633;
+          lng = 79.58879;
+        }
+
+        // Hard International Border filter:
+        if ((lng > 78.5 && lat > 31.0) || (lng > 88.0 && lat > 28.2) || (lng < 68.2 && lat > 24.0)) {
+          return false;
+        }
+        if (lat < 6.5 || lat > 37.1 || lng < 68.0 || lng > 97.5) {
+          return false;
+        }
+        return true;
+      });
+
       state.hospitals = data;
       calculateDistances();
       populateStateDropdown();
@@ -949,6 +988,14 @@ function applyFilters() {
   const sortMode = state.activeSort;
 
   let results = state.hospitals.filter(h => {
+    let lat = Number(h.lat);
+    let lng = Number(h.lng);
+    if (isNaN(lat) || isNaN(lng)) return false;
+
+    // Hard boundary guard: strictly exclude points in China / Tibet / Pakistan or outside India
+    if ((lng > 78.5 && lat > 31.0) || (lng > 88.0 && lat > 28.2) || (lng < 68.2 && lat > 24.0)) return false;
+    if (lat < 6.5 || lat > 37.1 || lng < 68.0 || lng > 97.5) return false;
+
     // Text search (name, category, care type, district, state, pincode, address, specialties)
     if (query) {
       const q = query.toLowerCase().trim();
