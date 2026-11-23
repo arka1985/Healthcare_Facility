@@ -479,12 +479,23 @@ function parseRecords(records) {
       }
     }
 
-    if (isNaN(lat) || isNaN(lng) || lat < 6.0 || lat > 38.5 || lng < 68.0 || lng > 97.5) return;
-
     const name = r.Facility_Name || r.facility_name || r.Hospital_Name || r.hospital_name || 'Healthcare Facility';
     const stateName = r.State_Name || r.state_name || r.State || r.state || '';
     const districtName = r.District_Name || r.district_name || r.District || r.district || '';
     const subdistName = r.Subdistrict_Name || r.subdistrict_name || r.Subdistrict || '';
+
+    // Auto-correct government dataset clerical typos:
+    // SIKANDERPUR (Kannauj, UP) was entered with 37.13633 instead of 27.13633
+    if (lat > 35.0 && (stateName.toLowerCase().includes('uttar pradesh') || districtName.toLowerCase().includes('kannauj'))) {
+      lat -= 10.0;
+    }
+    // Sevar (Dhaulpur, Rajasthan) was entered with 6.64679 instead of 26.64679
+    if (lat < 10.0 && stateName.toLowerCase().includes('rajasthan')) {
+      lat += 20.0;
+    }
+
+    // Strict validation: Coordinates must be valid and strictly inside India's geographic bounds
+    if (isNaN(lat) || isNaN(lng) || lat < 6.5 || lat > 37.1 || lng < 68.0 || lng > 97.5) return;
     const ftype = (r.Facility_Type || r.facility_type || '').toLowerCase();
     const careType = typeMap[ftype] || r.Hospital_Care_Type || r.hospital_care_type || r.Type_Of_Facility || 'Health Centre';
     const category = r.Hospital_Category || r.hospital_category || 'Public / Government';
@@ -1015,16 +1026,35 @@ function applyFilters() {
 function renderMarkers(facilities) {
   markerClusterGroup.clearLayers();
 
-  // If there are many facilities, we add them in batch
+  // Deduplication & dispersion maps
   const markers = [];
   const coordCounts = new Map();
+  const seenIds = new Set();
+  const seenAtCoord = new Map();
 
   facilities.forEach(h => {
+    // 1. Skip duplicate IDs if present
+    if (seenIds.has(h.id)) return;
+    seenIds.add(h.id);
+
     let lat = Number(h.lat);
     let lng = Number(h.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
 
-    // If multiple distinct facilities share the exact same centroid coordinates,
-    // disperse them slightly in a micro-circle (~20m) so both are visible
+    // 2. Prevent rendering duplicate facilities sharing the same coordinates (~25m) and matching name
+    const norm = (h.name || '').toLowerCase()
+      .replace(/primary health centre|community health centre|sub-centre|sub centre|subcentre|hospital|clinic|dispensary|dr\.?|shree|sri/g, '')
+      .replace(/[^a-z0-9]/g, '');
+
+    const coordKey3 = `${lat.toFixed(3)}_${lng.toFixed(3)}`;
+    const prevNorm = seenAtCoord.get(coordKey3);
+    if (prevNorm && norm.length >= 3 && (prevNorm === norm || prevNorm.includes(norm) || norm.includes(prevNorm))) {
+      return; // Skip duplicate facility entry at same location
+    }
+    seenAtCoord.set(coordKey3, norm);
+
+    // If multiple distinct facilities genuinely share the exact same centroid coordinates,
+    // disperse them slightly in a micro-circle (~18m) so both are visible
     const coordKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
     const count = coordCounts.get(coordKey) || 0;
     coordCounts.set(coordKey, count + 1);
@@ -1039,7 +1069,7 @@ function renderMarkers(facilities) {
     const icon = getHospitalMarkerIcon(h);
     const m = L.marker([lat, lng], { icon: icon });
 
-    // Popup content with action buttons
+    // Popup content with action buttons, optimized for mobile screens
     m.bindPopup(() => {
       const distBadge = h.distanceKm !== undefined
         ? `<span class="popup-dist-badge"><i class="fa-solid fa-location-arrow"></i> ${formatDistance(h.distanceKm)}</span>`
@@ -1068,6 +1098,11 @@ function renderMarkers(facilities) {
           </div>
         </div>
       `;
+    }, {
+      maxWidth: 300,
+      minWidth: 220,
+      autoPan: true,
+      autoPanPadding: [20, 75]
     });
 
     markers.push(m);
@@ -1461,14 +1496,51 @@ function setupEventListeners() {
 
   // Sidebar Toggle on Desktop & Mobile
   const sidebar = document.getElementById('appSidebar');
-  document.getElementById('sidebarToggleBtn').addEventListener('click', () => {
+  const toggleBtn = document.getElementById('sidebarToggleBtn');
+
+  function updateSidebarToggleIcon(isOpen) {
+    if (!toggleBtn) return;
+    toggleBtn.classList.toggle('is-open', isOpen);
+    const icon = toggleBtn.querySelector('i');
+    if (icon) {
+      icon.className = isOpen ? 'fa-solid fa-xmark' : 'fa-solid fa-bars-staggered';
+    }
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    toggleBtn.classList.remove('hamburger-pulse'); // Stop pulsing once user has interacted
     if (window.innerWidth <= 900) {
-      sidebar.classList.toggle('mobile-open');
+      const isOpen = sidebar.classList.toggle('mobile-open');
+      updateSidebarToggleIcon(isOpen);
+      // Sync bottom navigation active tab
+      const mapTab = document.querySelector('.mobile-tab-btn[data-tab="map"]');
+      const listTab = document.querySelector('.mobile-tab-btn[data-tab="list"]');
+      if (isOpen && listTab) {
+        document.querySelectorAll('.mobile-tab-btn').forEach(t => t.classList.remove('active'));
+        listTab.classList.add('active');
+      } else if (!isOpen && mapTab) {
+        document.querySelectorAll('.mobile-tab-btn').forEach(t => t.classList.remove('active'));
+        mapTab.classList.add('active');
+      }
     } else {
       sidebar.classList.toggle('collapsed');
       setTimeout(() => map.invalidateSize(), 300);
     }
   });
+
+  // Mobile Top "Back to Map" Close Button
+  const closeMobileSidebarBtn = document.getElementById('closeMobileSidebarBtn');
+  if (closeMobileSidebarBtn) {
+    closeMobileSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.remove('mobile-open');
+      updateSidebarToggleIcon(false);
+      const mapTab = document.querySelector('.mobile-tab-btn[data-tab="map"]');
+      if (mapTab) {
+        document.querySelectorAll('.mobile-tab-btn').forEach(t => t.classList.remove('active'));
+        mapTab.classList.add('active');
+      }
+    });
+  }
 
   // Mobile Bottom Tab Bar
   document.querySelectorAll('.mobile-tab-btn').forEach(tab => {
@@ -1479,10 +1551,13 @@ function setupEventListeners() {
       const target = tab.dataset.tab;
       if (target === 'map') {
         sidebar.classList.remove('mobile-open');
+        updateSidebarToggleIcon(false);
       } else if (target === 'list') {
         sidebar.classList.add('mobile-open');
+        updateSidebarToggleIcon(true);
       } else if (target === 'locate') {
         sidebar.classList.remove('mobile-open');
+        updateSidebarToggleIcon(false);
         locateUser(true);
       } else if (target === 'route') {
         if (state.activeRoute) {

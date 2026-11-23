@@ -49,7 +49,7 @@
     <!-- Top Navigation Header -->
     <header class="app-header">
       <div class="header-left">
-        <button id="sidebarToggleBtn" class="icon-btn-ghost" title="Toggle List">
+        <button id="sidebarToggleBtn" class="icon-btn-ghost hamburger-pulse" title="Search & Facilities Menu">
           <i class="fa-solid fa-bars-staggered"></i>
         </button>
         <div class="brand-wrapper">
@@ -117,6 +117,18 @@
       <aside id="appSidebar" class="app-sidebar">
         <!-- Search & Filter Controls Container -->
         <div class="sidebar-header">
+          <!-- Mobile Sidebar Title & Close Bar -->
+          <div class="mobile-sidebar-header-bar">
+            <div class="mobile-sidebar-title">
+              <i class="fa-solid fa-hospital-user"></i>
+              <span>Search &amp; Filter Facilities</span>
+            </div>
+            <button id="closeMobileSidebarBtn" class="btn-close-mobile-sidebar" title="Back to Map">
+              <i class="fa-solid fa-xmark"></i>
+              <span>Map</span>
+            </button>
+          </div>
+
           <!-- Live Search Input -->
           <div class="search-box-wrap">
             <i class="fa-solid fa-magnifying-glass search-icon"></i>
