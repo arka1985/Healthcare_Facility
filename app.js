@@ -24,7 +24,9 @@ const CONFIG = {
 
 // Global App State
 const state = {
-  hospitals: [],
+  hospitals: (typeof window !== 'undefined' && Array.isArray(window.DEFAULT_HOSPITALS_DATA) && window.DEFAULT_HOSPITALS_DATA.length > 0)
+    ? [...window.DEFAULT_HOSPITALS_DATA]
+    : [],
   filtered: [],
   userCoords: null, // [lat, lng]
   userAccuracy: null,
@@ -63,6 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initMap();
   setupEventListeners();
   setupPWA();
+  // Immediately render pre-bundled failsafe facilities (zero network delay)
+  if (state.hospitals && state.hospitals.length > 0) {
+    populateStateDropdown();
+    applyFilters();
+    updateDataSourceStatus('fallback', `National Directory (${state.hospitals.length.toLocaleString()} facilities)`);
+  }
   loadData();
 });
 
@@ -375,20 +383,34 @@ async function loadData() {
   }
 }
 
-// Fallback dataset loader
+// Fallback dataset loader (Progressive enhancement for full 47k+ nationwide dataset)
 async function loadFallbackDataset(customPath) {
   const filePath = customPath || state.activeDatasetFile || CONFIG.FALLBACK_DATA_PATH;
   try {
-    const res = await fetch(filePath);
-    if (!res.ok) throw new Error(`Fallback file not found: ${filePath}`);
+    // Resolve path relative to current repo base directory, supporting trailing slash
+    const baseHref = window.location.href.split('?')[0].split('#')[0];
+    const baseUrl = baseHref.substring(0, baseHref.lastIndexOf('/') + 1);
+    const fetchUrl = new URL(filePath, baseUrl).href;
+
+    const res = await fetch(fetchUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${fetchUrl}`);
     const data = await res.json();
-    state.hospitals = data;
-    updateDataSourceStatus('fallback', `National Directory (${data.length.toLocaleString()} facilities)`);
-    showToast(`Loaded ${data.length.toLocaleString()} healthcare facilities across India`);
+    if (Array.isArray(data) && data.length > 0) {
+      state.hospitals = data;
+      calculateDistances();
+      populateStateDropdown();
+      applyFilters();
+      updateDataSourceStatus('fallback', `National Directory (${data.length.toLocaleString()} facilities)`);
+      showToast(`Loaded full database: ${data.length.toLocaleString()} facilities across India`);
+    }
   } catch (err) {
-    console.error('Failed to load fallback dataset:', err);
-    updateDataSourceStatus('error', 'Error loading dataset');
-    showToast('Failed to load dataset. Please check files or upload CSV.', 'error');
+    console.warn('Fallback dataset progressive fetch note:', err.message);
+    if (state.hospitals && state.hospitals.length > 0) {
+      updateDataSourceStatus('fallback', `National Directory (${state.hospitals.length.toLocaleString()} facilities)`);
+    } else {
+      updateDataSourceStatus('error', 'Error loading dataset');
+      showToast('Failed to load dataset. Please check files or upload CSV.', 'error');
+    }
   }
 }
 
@@ -907,7 +929,7 @@ function applyFilters() {
         (h.specialties && h.specialties.toLowerCase().includes(q)) ||
         // Handle common search synonyms
         ((q === 'public' || q === 'govt' || q === 'government') && 
-          (cat.includes('public') || cat.includes('government') || care.includes('district') || care.includes('community') || care.includes('primary') || tcode === 'phc' || tcode === 'chc' || tcode === 'dis_h')) ||
+          (cat.includes('public') || cat.includes('government') || care.includes('district') || care.includes('sub-divisional') || care.includes('community') || care.includes('primary') || tcode === 'phc' || tcode === 'chc' || tcode === 'dis_h' || tcode === 's_t_h')) ||
         (q === 'private' && cat.includes('private')) ||
         (q === 'chc' && (tcode === 'chc' || care.includes('community') || name.includes('chc'))) ||
         (q === 'phc' && (tcode === 'phc' || care.includes('primary') || name.includes('phc')));
@@ -929,7 +951,10 @@ function applyFilters() {
         if (!isPublic) return false;
       }
       if (category === 'private' && !cat.includes('private')) return false;
-      if (category === 'dis_h' && !care.includes('district') && tcode !== 'dis_h') return false;
+      if (category === 'dis_h') {
+        const isDistrictHosp = care.includes('district') || care.includes('sub-divisional') || care.includes('general hospital') || care.includes('sdh') || care.includes('sgh') || name.includes('district hospital') || name.includes('sdh') || name.includes('sgh') || tcode === 'dis_h' || tcode === 's_t_h';
+        if (!isDistrictHosp) return false;
+      }
       if (category === 'chc' && !care.includes('community') && !name.includes('chc') && tcode !== 'chc') return false;
       if (category === 'phc' && !care.includes('primary') && !name.includes('phc') && tcode !== 'phc') return false;
       if (category === 'emergency' && !emergency.includes('24') && !name.includes('emergency') && !name.includes('trauma')) return false;
@@ -1139,9 +1164,17 @@ function renderCardsList(facilities) {
 // Populate State filter dropdown
 function populateStateDropdown() {
   const select = document.getElementById('stateFilterSelect');
+  if (!select) return;
+  const currentVal = state.activeState || select.value || 'all';
+
+  // Read existing options to avoid duplicates
+  const existingValues = new Set(Array.from(select.options).map(o => o.value.trim().toLowerCase()));
+
   const statesSet = new Set();
   state.hospitals.forEach(h => {
-    if (h.state) statesSet.add(h.state);
+    if (h.state && !existingValues.has(h.state.trim().toLowerCase())) {
+      statesSet.add(h.state.trim());
+    }
   });
 
   const sortedStates = Array.from(statesSet).sort();
@@ -1150,7 +1183,10 @@ function populateStateDropdown() {
     opt.value = s;
     opt.textContent = s;
     select.appendChild(opt);
+    existingValues.add(s.toLowerCase());
   });
+
+  select.value = currentVal;
 }
 
 // ==========================================================================

@@ -1,9 +1,11 @@
-const CACHE_NAME = 'aarogyamap-cache-v4';
+const CACHE_NAME = 'aarogyamap-cache-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './data/hospitals_failsafe.js',
+  './INDIA/india_data.js',
   './manifest.json',
   './favicon.png',
   './assets/cliparts/logo.svg',
